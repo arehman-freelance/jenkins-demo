@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                    script {
+                            withCredentials([sshUserPrivateKey(
+                            credentialsId: "ssh-debian-qa-app", 
+                            keyFileVariable: 'sshKey',
+                            usernameVariable: 'sshUser'
+                        )]) {
+                            def remote = [:];
+                            remote.name = 'qa.app';
+                            remote.host = '51.38.56.21';
+                            remote.port = 9292;
+                            remote.user = sshUser; 
+                            remote.identityFile = sshKey;
+                            remote.allowAnyHosts = true;
+
+                            sshCommand remote: remote, command: "ls -lrt"
+                        } 
+                    }
+                }
+        }
+    }
+}
