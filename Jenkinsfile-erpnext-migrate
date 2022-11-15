@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Pull') {
+            steps {
+                echo 'Pulling the code'
+                //cleanWs()
+                git 'https://github.com/ShahzadNaser/buy_n_buy.git'
+            }
+        }
+        stage('Dependencies') {
+            steps {
+                echo 'Adding dependencies'
+                sh 'cp /home/confs/buy_n_buy/* .'
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Building images'
+                sh 'docker buildx bake'
+            }
+        }
+        stage('Push') {
+            steps {
+                echo 'Pushing images'
+                sh 'docker push 65.21.145.226:32000/frappe-nginx:base'
+                sh 'docker push 65.21.145.226:32000/erpnext-worker:base'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying to the production'
+                sh 'kubectl --kubeconfig kube_config delete --all pods -n erp14'
+            }
+        }
+        stage('Migrate') {
+            steps {
+                echo 'Migrating'
+                sleep 15
+                sh 'export cont_id=$(kubectl --kubeconfig kube_config get pod -n erp14 | grep "gunicorn" | awk "END {print $1}" | xargs echo) && kubectl --kubeconfig kube_config -n erp14 exec -it $cont_id -- bench migrate'
+            }
+        }                
+    }
+}
